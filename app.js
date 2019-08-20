@@ -31,7 +31,7 @@ watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
 	// 
 	if( name.indexOf('.gcode') > 0 || name.indexOf('.stl')  > 0) {	
 		fs.stat(name, function(err, stats) {
-			if(err){
+			if(err ||  stats["size"] < 1){
 				console.log('nopSize');
 				return;
 			}
@@ -60,20 +60,34 @@ watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
 function upload_to_octoprint(name, stats){
 	
 	// Was already send
-	/*
-	if (stats["size"] == lastSize || stats["size"] < 1){
+	if (stats["size"] == lastSize){
 		console.log('This file has already been seen ' + name);
 		return;
 	}
 	lastSize = stats["size"];
-	*/
+
 	
 	// Send file to 3d printer
 	console.log('uploading...');
 	server.sendFile(name).then(function(response){
 		console.log(response);		
 		console.log('Succes !');
-		//afterUpload(name);
+		
+		/*
+		{ 
+			done: true,
+			files: { 
+				local: { 
+					name: 'tepplllpst.gcode',
+					origin: 'local',
+					path: 'tepplllpst.gcode',
+					refs: [Object] 
+				} 
+			} 
+		}
+		*/
+		
+		afterUpload(name);
 	}).catch(function(err){
 		console.error(err);
 	});
@@ -83,6 +97,7 @@ function upload_to_octoprint(name, stats){
 
 
 function afterUpload(file){
+	
 	// Delet file ? Or move ?
 	var name = path.basename(file);
 	console.log('move ' + file + ' to ' + config.paths.gcode_history + name);
