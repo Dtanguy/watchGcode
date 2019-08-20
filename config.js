@@ -1,12 +1,12 @@
 var config = {
 	paths: {
-		to_watch		: 'C:\\Users\\Tanguy\\',
-		gcode_history  	: 'C:\\Users\\Tanguy\\Documents\\history\\gcode',
-		stl_history    	: 'C:\\Users\\Tanguy\\Documents\\history\\stl'
+		to_watch		: 'C:\\Users\\Pyro\\',
+		gcode_history  	: 'D:\\Documents\\gcode_history\\',
+		stl_history    	: 'D:\\Documents\\stl_history\\'
 	},
 	octoprint: {
-		address			: 'http://192.168.2.136:5000/',
-		APIKey			: '86D6DB3DFB0F40C69215E74F27B0E02C'
+		address			: 'http://176.132.206.163:5000/',
+		APIKey			: '86C6844C648F418C952E318F77D72843'
 	}
 };
 
