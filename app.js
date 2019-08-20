@@ -1,14 +1,14 @@
-var fs              = require('fs');
-var path            = require("path");
-var watch           = require('node-watch');
-var OctoPrintServer = require('octoprint');
-var moveFile        = require('move-file');
-var color			= require('./node_modules/nodeColor/color.js');
+let fs              = require('fs');
+let path            = require("path");
+let watch           = require('node-watch');
+let OctoPrintServer = require('octoprint');
+let moveFile        = require('move-file');
+let color			= require('./node_modules/nodeColor/color.js');
 
-var config			= require('./config.js');
-var lastSize  = -1;
+let config			= require('./config.js');
+let lastSize  = -1;
 
-var server = new OctoPrintServer(config.octoprint);
+let server = new OctoPrintServer(config.octoprint);
 
 
 console.log('Home path : ' + config.paths.to_watch);
@@ -47,6 +47,7 @@ watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
 			if( name.indexOf('.stl')  > -1 ) {
 				// Slice dat shit
 				console.log('New STL find : ' + name + ' evt: ' + evt + ' size: ' + stats["size"]);
+				slice(name, stats);
 			}
 			
 		});
@@ -57,64 +58,62 @@ watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
 
 
 
-function upload_to_octoprint(name, stats){
-	
+function upload_to_octoprint(name, stats){	
 	// Was already send
 	if (stats["size"] == lastSize){
 		console.log('This file has already been seen ' + name);
+		console.warn('DELETE');
+		fs.unlinkSync(name);
 		return;
 	}
 	lastSize = stats["size"];
 
 	
 	// Send file to 3d printer
-	console.log('uploading...');
-	server.sendFile(name).then(function(response){
+	console.warn('uploading...');
+	/*server.sendFile(name).then(function(response){
 		console.log(response);		
 		console.log('Succes !');
-		
-		/*
-		{ 
-			done: true,
-			files: { 
-				local: { 
-					name: 'tepplllpst.gcode',
-					origin: 'local',
-					path: 'tepplllpst.gcode',
-					refs: [Object] 
-				} 
-			} 
-		}
-		*/
-		
-		afterUpload(name);
+		moveTo(name);
 	}).catch(function(err){
 		console.error(err);
-	});
+	});*/
 	
+	let res = { 
+		done: true,
+		files: { 
+			local: { 
+				name: 'tepplllpst.gcode',
+				origin: 'local',
+				path: 'tepplllpst.gcode',
+				refs: [Object] 
+			} 
+		} 
+	};
+	console.log(res);
+	moveTo(name,config.paths.gcode_history);	
 }
 
 
 
-function afterUpload(file){
-	
-	// Delet file ? Or move ?
-	var name = path.basename(file);
-	console.log('move ' + file + ' to ' + config.paths.gcode_history + name);
-	
-	//fs.rename(file, config.paths.gcode_history + name, function(err){
-	//	if(err){
-	//		console.log(err.red);
-	//	}
-		
-	//});
-	
+function slice(name, stats){
+	moveTo(name, config.paths.stl_history);
+}
+
+
+function moveTo(file, dir){	
+	// Move file
+	let name = path.basename(file);
+	console.warn('move ' + file + ' to ' + dir + '\\' + name);	
+	if (!fs.existsSync(dir)) {
+		fs.mkdirSync(dir);
+	}
 	try{
-		moveFile(file, config.paths.gcode_history + name);
+		let date = new Date(Date.now());
+		moveFile(file, dir + '\\' + '[' + date.toISOString().replace(/T/, ' ').replace(/\..+/, '').split(':').join('-') + '] ' + name);
 	}catch(err){
 		console.error('Move error', err);
-	}
-	
+	}	
 }
 
 
@@ -130,6 +129,16 @@ function getFilesizeInBytes(filename) {
 
 /*
 
+// Delet file ? Or move ?
+	//fs.rename(file, config.paths.gcode_history + name, function(err){
+	//	if(err){
+	//		console.log(err.red);
+	//	}
+		
+	//});
+	
+	
+	
 var sending = false;
 
 
