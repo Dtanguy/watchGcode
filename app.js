@@ -60,11 +60,13 @@ watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
 function upload_to_octoprint(name, stats){
 	
 	// Was already send
+	/*
 	if (stats["size"] == lastSize || stats["size"] < 1){
 		console.log('This file has already been seen ' + name);
 		return;
 	}
 	lastSize = stats["size"];
+	*/
 	
 	// Send file to 3d printer
 	console.log('uploading...');
