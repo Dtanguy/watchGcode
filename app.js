@@ -21,15 +21,15 @@ watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
 
 	// Thing i dont want
 	if(	evt == 'removed'            ||
-		name.indexOf('.lnk')    > 0 || 
-		name.indexOf(config.paths.gcode_history)  > 0 ||
-		name.indexOf(config.paths.stl_history)  > 0 ||
-		name.indexOf('AppData') > 0 ){
+		name.indexOf('.lnk')    > -1 || 
+		name.indexOf(config.paths.gcode_history)  > -1 ||
+		name.indexOf(config.paths.stl_history)  > -1 ||
+		name.indexOf('AppData') > -1 ){
 		return; 
 	}	
 	
 	// 
-	if( name.indexOf('.gcode') > 0 || name.indexOf('.stl')  > 0) {	
+	if( name.indexOf('.gcode') > -1 || name.indexOf('.stl')  > -1) {	
 		fs.stat(name, function(err, stats) {
 			if(err ||  stats["size"] < 1){
 				console.log('nopSize');
@@ -37,14 +37,14 @@ watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
 			}
 			
 			// File is GCODE
-			if( name.indexOf('.gcode') > 0 ) {
+			if( name.indexOf('.gcode') > -1 ) {
 				//Send dat shit
 				console.log('New GCODE find : ' + name + ' evt: ' + evt + ' size: ' + stats["size"]);
 				upload_to_octoprint(name, stats);
 			}
 
 			// File is STL
-			if( name.indexOf('.stl')  > 0 ) {
+			if( name.indexOf('.stl')  > -1 ) {
 				// Slice dat shit
 				console.log('New STL find : ' + name + ' evt: ' + evt + ' size: ' + stats["size"]);
 			}
