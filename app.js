@@ -1,8 +1,7 @@
-let fs              = require('fs');
+let fs 				= require ('fs.extra');
 let path            = require("path");
 let watch           = require('node-watch');
 let OctoPrintServer = require('octoprint');
-let moveFile        = require('move-file');
 let color			= require('./node_modules/nodeColor/color.js');
 
 let config			= require('./config.js');
@@ -11,9 +10,8 @@ let lastSize  = -1;
 let server = new OctoPrintServer(config.octoprint);
 let remoteFiles = {};
 
-console.log('Home path : ' + config.paths.to_watch);
-console.log('Save path : ' + config.paths.gcode_history);
-updateRemoteFiles();
+console.log('Home path : ' + color.green(config.paths.to_watch));
+console.log('Save path : ' + color.green(config.paths.gcode_history));
 
 
 watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
@@ -32,24 +30,21 @@ watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
 	if( name.indexOf('.gcode') > -1 || name.indexOf('.stl')  > -1) {	
 		fs.stat(name, function(err, stats) {
 			if(err ||  stats["size"] < 1){
-				console.log('nopSize');
+				//console.log('nopSize');
 				return;
 			}
 			
 			// File is GCODE
 			if( name.indexOf('.gcode') > -1 ) {
-				//Send dat shit
-				console.log('New GCODE find : ' + name + ' evt: ' + evt + ' size: ' + stats["size"]);
-				if(!checkAlready(name, stats)){
-					let new_name = moveTo(name, config.paths.gcode_history);	
-					upload_to_octoprint(new_name, stats);
-				}				
+				// Send dat shit
+				console.log('New GCODE find : ' + color.green(name) + ' evt: ' + evt + ' size: ' + stats["size"]);
+				sendOctoprint(name, stats);					
 			}
 
 			// File is STL
 			if( name.indexOf('.stl')  > -1 ) {
 				// Slice dat shit
-				console.log('New STL find : ' + name + ' evt: ' + evt + ' size: ' + stats["size"]);
+				console.log('New STL find : ' + color.green(name) + ' evt: ' + evt + ' size: ' + stats["size"]);
 				slice(name, stats);
 			}
 			
@@ -63,73 +58,23 @@ watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
 
 
 
-function checkAlready(name, stats){
-	for(let f in remoteFiles){
-		if (remoteFiles[f].display == name.split("\\")[name.split("\\").length-1] && stats["size"] == remoteFiles[f].size){
-			console.log('This file has already been seen ' + name);
-			console.warn('DELETE');
-			fs.unlinkSync(name);
-			return true;
-		}
-		//console.log("File name: " + remoteFiles[f].display + " Size: " + remoteFiles[f].size);
-	}	
-	return false;
-}
-
-
-
-
-function moveTo(file, dir){	
-	// Move file
-	let name = path.basename(file);
-	console.warn('move ' + file + ' to ' + dir + '\\' + name);	
-	if (!fs.existsSync(dir)) {
-		fs.mkdirSync(dir);
-	}
-	try{
+function sendOctoprint(name, stats){
+	if(checkAlready(name, stats, function(){
+		
 		let date = new Date(Date.now());
-		let new_name = dir + '\\' + '[' + date.toISOString().replace(/T/, ' ').replace(/\..+/, '').split(':').join('-') + '] ' + name;
-		moveFile(file, new_name);
-		return new_name;
-	}catch(err){
-		console.error('Move error', err);
-		return -1;
-	}	
+		let new_name = path.join(config.paths.gcode_history, '[' + date.toISOString().replace(/T/, ' ').replace(/\..+/, '').split(':').join('-') + '] ' + path.basename(name));
+						
+		fs.move (name, new_name, function (err) {
+			if (err) {
+				console.error(err);
+				return;
+			}
+			console.warn('move ' + color.green(name) + ' to ' + color.green(new_name));
+			upload_to_octoprint(new_name);	
+		});
+		
+	}));
 }
-
-
-
-function upload_to_octoprint(name, stats){	
-	
-	
-
-	
-	// Send file to 3d printer
-	console.warn('uploading...');
-	/*server.sendFile(name).then(function(response){
-		console.log(response);		
-		console.log('Succes !');
-		moveTo(name);
-	}).catch(function(err){
-		console.error(err);
-	});*/
-	
-	let res = { 
-		done: true,
-		files: { 
-			local: { 
-				name: 'tepplllpst.gcode',
-				origin: 'local',
-				path: 'tepplllpst.gcode',
-				refs: [Object] 
-			} 
-		} 
-	};
-	console.log(res);
-	//
-	updateRemoteFiles();
-}
-
 
 
 function slice(name, stats){
@@ -139,17 +84,39 @@ function slice(name, stats){
 
 
 
-
-function updateRemoteFiles(){
+function checkAlready(name, stats, callback){	
 	server.getAllFiles().then(function(files, err){
 		if (err) {
 		  console.error(err);
 		  return;
 		}
-		remoteFiles = files.files
-		/*for(let f in files.files){
-			console.log("File name: " + files.files[f].display + " Size: " + files.files[f].size);
-		}*/
+		remoteFiles = files.files;
+		console.log("Check " + color.green(remoteFiles.length) + " Files name");
+		for(let f in remoteFiles){
+			//console.log("File name: " + remoteFiles[f].display + " Size: " + remoteFiles[f].size);
+			if (remoteFiles[f].display == name.split("\\")[name.split("\\").length-1] && stats["size"] == remoteFiles[f].size){
+				console.log('This file has already been seen ' + color.green(new_name));
+				console.warn('DELETE');
+				fs.unlinkSync(name);
+				return;
+			}
+		}
+		callback();		
+	});
+}
+
+
+
+
+function upload_to_octoprint(name){	
+	// Send file to 3d printer
+	console.warn('uploading... ');
+	server.sendFile(name).then(function(response){
+		//console.log(response);		
+		console.log('Succes !');
+		//updateRemoteFiles();
+	}).catch(function(err){
+		console.error(err);
 	});
 }
 
@@ -177,6 +144,155 @@ function updateRemoteFiles(){
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+
+
+
+
+
+function updateRemoteFiles(){
+	server.getAllFiles().then(function(files, err){
+		if (err) {
+		  console.error(err);
+		  return;
+		}
+		remoteFiles = files.files;
+		for(let f in files.files){
+			console.log("File name: " + files.files[f].display + " Size: " + files.files[f].size);
+		}
+	});
+}
+
+
+
+
+
+
+
+
+
+
+function checkAlready(name, stats, callback){
+	
+	server.getAllFiles().then(function(files, err){
+		if (err) {
+		  console.error(err);
+		  return;
+		}
+		remoteFiles = files.files;
+		
+		
+		for(let f in files.files){
+			console.log("File name: " + files.files[f].display + " Size: " + files.files[f].size);
+		}
+		
+	});
+	
+	callback();
+	
+	for(let f in remoteFiles){
+		if (remoteFiles[f].display == name.split("\\")[name.split("\\").length-1] && stats["size"] == remoteFiles[f].size){
+			console.log('This file has already been seen ' + name);
+			console.warn('DELETE');
+			fs.unlinkSync(name);
+			return true;
+		}
+		//console.log("File name: " + remoteFiles[f].display + " Size: " + remoteFiles[f].size);
+	}	
+	return false;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+let new_name = moveTo(name, config.paths.gcode_history);
+upload_to_octoprint(new_name, stats);		
+					
+function moveTo(file, dir, callback){	
+	// Move file
+	let name = path.basename(file);
+	let date = new Date(Date.now());
+	let new_name = path.join(dir, '[' + date.toISOString().replace(/T/, ' ').replace(/\..+/, '').split(':').join('-') + '] ' + name);
+	console.warn('move ' + file + ' to ' + dir + '\\' + new_name);	
+	
+	
+	if (!fs.existsSync(dir)) {
+		fs.mkdirSync(dir);
+	}
+	//try{
+		fs.renameSync(file, new_name);
+		//move(file, new_name, callback);
+		//moveFile(file, new_name);
+		return new_name;
+	//}catch(err){
+	//	console.error('Move error', err);
+	//	return -1;
+	//}	
+}
+
+
+
+
+function move(oldPath, newPath, callback) {
+
+    fs.rename(oldPath, newPath, function (err) {
+        if (err) {
+            if (err.code === 'EXDEV') {
+                copy();
+            } else {
+                callback(err);
+            }
+            return;
+        }
+        callback(newPath);
+    });
+
+    function copy() {
+        var readStream = fs.createReadStream(oldPath);
+        var writeStream = fs.createWriteStream(newPath);
+
+        readStream.on('error', callback);
+        writeStream.on('error', callback);
+
+        readStream.on('close', function () {
+            fs.unlink(oldPath, callback);
+        });
+
+        readStream.pipe(writeStream);
+    }
+}
+*/
 
 
 /*
