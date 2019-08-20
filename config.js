@@ -1,8 +1,8 @@
 var config = {
 	paths: {
-		to_watch		: 'C:\\Users\\Tanguy\\',
-		gcode_history  	: 'C:\\Users\\Tanguy\\Documents\\history\\gcode',
-		stl_history    	: 'C:\\Users\\Tanguy\\Documents\\history\\stl'
+		to_watch		: 'C:\\Users\\Tanguy',
+		gcode_history  	: 'C:\\Users\\Tanguy\\Documents\\gcode_history',
+		stl_history    	: 'C:\\Users\\Tanguy\\Documents\\stl_history'
 	},
 	octoprint: {
 		address			: 'http://192.168.2.136:5000/',
