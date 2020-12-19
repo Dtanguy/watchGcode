@@ -4,7 +4,7 @@ A daemon for simplifying STL / Gcode management for 3D printing with Octoprint.
 - Keep history of the files in a selected folder with a timestamp in name.
 - [TODO] automatically slice STL files
 
-## Install
+## Installation
 ```js
 npm i
 ```
