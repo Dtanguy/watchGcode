@@ -5,7 +5,6 @@ let watch			= require('node-watch');
 let OctoPrintServer	= require('octoprint');
 var colors 			= require('colors');
 
-
 var settings = {
 	address: process.env.OCTOPRINT_ADRESS,
 	APIKey: process.env.APIKEY//,
@@ -13,10 +12,23 @@ var settings = {
 };
 let server = new OctoPrintServer(settings);
 
+var GCODE_HISTORY = process.env.HISTORY + 'watchgcode\gcode';
+var STL_HISTORY = process.env.HISTORY + 'watchgcode\stl';
+if (!fs.existsSync(process.env.HISTORY + 'watchgcode')){
+    fs.mkdirSync(process.env.HISTORY + 'watchgcode');
+}
+if (!fs.existsSync(GCODE_HISTORY)){
+    fs.mkdirSync(GCODE_HISTORY);
+}
+if (!fs.existsSync(STL_HISTORY)){
+    fs.mkdirSync(STL_HISTORY);
+}
 
 let remoteFiles = {};
 console.log('Home path : ' + colors.green(process.env.TO_WATCH));
-console.log('Save path : ' + colors.green(process.env.GCODE_HISTORY));
+console.log('Save path : ' + colors.green(GCODE_HISTORY));
+
+
 
 
 watch(process.env.TO_WATCH, { recursive: true }, function(evt, name) {
@@ -25,8 +37,8 @@ watch(process.env.TO_WATCH, { recursive: true }, function(evt, name) {
 	// Thing i don't want
 	if(	evt == 'removed'            ||
 		name.indexOf('.lnk')    > -1 || 
-		name.indexOf(process.env.GCODE_HISTORY)  > -1 ||
-		name.indexOf(process.env.STL_HISTORY)  > -1 ||
+		name.indexOf(GCODE_HISTORY)  > -1 ||
+		name.indexOf(STL_HISTORY)  > -1 ||
 		name.indexOf('AppData') > -1 ){
 		return; 
 	}	
@@ -66,8 +78,8 @@ function sendOctoprint(name, stats){
 	if(checkAlready(name, stats, function(){
 		
 		//let date = new Date(Date.now());
-		//let new_name = path.join(process.env.GCODE_HISTORY, '[' + date.toISOString().replace(/T/, '_').replace(/\..+/, '').split(':').join('-') + ']_' + path.basename(name));
-		let new_name = path.join(process.env.GCODE_HISTORY, path.basename(name).split('.')[0] + '-[' + Date.now() + ']' + '.gcode');
+		//let new_name = path.join(GCODE_HISTORY, '[' + date.toISOString().replace(/T/, '_').replace(/\..+/, '').split(':').join('-') + ']_' + path.basename(name));
+		let new_name = path.join(GCODE_HISTORY, path.basename(name).split('.')[0] + '-[' + Date.now() + ']' + '.gcode');
 
 		fs.move (name, new_name, function (err) {
 			if (err) {
