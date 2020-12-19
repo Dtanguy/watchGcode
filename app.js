@@ -1,25 +1,32 @@
+require('dotenv').config();
 let fs				= require ('fs.extra');
 let path			= require("path");
 let watch			= require('node-watch');
 let OctoPrintServer	= require('octoprint');
-let color			= require('nodeColor');
+var colors 			= require('colors');
 
-let config = require('./config.js');
-let server = new OctoPrintServer(config.octoprint);
+
+var settings = {
+	address: process.env.OCTOPRINT_ADRESS,
+	APIKey: process.env.APIKEY//,
+	//version: "0.1",
+};
+let server = new OctoPrintServer(settings);
+
+
 let remoteFiles = {};
+console.log('Home path : ' + colors.green(process.env.TO_WATCH));
+console.log('Save path : ' + colors.green(process.env.GCODE_HISTORY));
 
-console.log('Home path : ' + color.green(config.paths.to_watch));
-console.log('Save path : ' + color.green(config.paths.gcode_history));
 
-
-watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
+watch(process.env.TO_WATCH, { recursive: true }, function(evt, name) {
 	//console.log('Changed: ' + name);
 
 	// Thing i don't want
 	if(	evt == 'removed'            ||
 		name.indexOf('.lnk')    > -1 || 
-		name.indexOf(config.paths.gcode_history)  > -1 ||
-		name.indexOf(config.paths.stl_history)  > -1 ||
+		name.indexOf(process.env.GCODE_HISTORY)  > -1 ||
+		name.indexOf(process.env.STL_HISTORY)  > -1 ||
 		name.indexOf('AppData') > -1 ){
 		return; 
 	}	
@@ -34,14 +41,14 @@ watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
 			// File is GCODE
 			if( name.indexOf('.gcode') > -1 ) {
 				// Send it
-				console.log('New GCODE find : ' + color.green(name) + ' evt: ' + evt + ' size: ' + stats["size"]);
+				console.log('New GCODE find : ' + colors.green(name) + ' evt: ' + evt + ' size: ' + stats["size"]);
 				sendOctoprint(name, stats);					
 			}
 
 			// File is STL
 			if( name.indexOf('.stl')  > -1 ) {
 				// Slice it
-				console.log('New STL find : ' + color.green(name) + ' evt: ' + evt + ' size: ' + stats["size"]);
+				console.log('New STL find : ' + colors.green(name) + ' evt: ' + evt + ' size: ' + stats["size"]);
 				slice(name, stats);
 			}
 			
@@ -58,24 +65,24 @@ watch(config.paths.to_watch, { recursive: true }, function(evt, name) {
 function sendOctoprint(name, stats){
 	if(checkAlready(name, stats, function(){
 		
-		let date = new Date(Date.now());
-		let new_name = path.join(config.paths.gcode_history, '[' + date.toISOString().replace(/T/, ' ').replace(/\..+/, '').split(':').join('-') + '] ' + path.basename(name));
-						
+		//let date = new Date(Date.now());
+		//let new_name = path.join(process.env.GCODE_HISTORY, '[' + date.toISOString().replace(/T/, '_').replace(/\..+/, '').split(':').join('-') + ']_' + path.basename(name));
+		let new_name = path.join(process.env.GCODE_HISTORY, path.basename(name).split('.')[0] + '-[' + Date.now() + ']' + '.gcode');
+
 		fs.move (name, new_name, function (err) {
 			if (err) {
 				console.error(err);
 				return;
 			}
-			console.warn('move ' + color.green(name) + ' to ' + color.green(new_name));
+			console.warn('move to ' + colors.green(new_name));
 			upload_to_octoprint(new_name);	
-		});
-		
+		});		
 	}));
 }
 
 
 function slice(name, stats){
-	//moveTo(name, config.paths.stl_history);
+	//moveTo(name, process.env.STL_HISTORY);
 }
 
 
@@ -88,11 +95,11 @@ function checkAlready(name, stats, callback){
 		  return;
 		}
 		remoteFiles = files.files;
-		console.log("Check " + color.green(remoteFiles.length) + " Files name");
+		console.log("Check " + colors.green(remoteFiles.length) + " Files name");
 		for(let f in remoteFiles){
 			//console.log("File name: " + remoteFiles[f].display + " Size: " + remoteFiles[f].size);
 			if (remoteFiles[f].display == name.split("\\")[name.split("\\").length-1] && stats["size"] == remoteFiles[f].size){
-				console.log('This file has already been seen ' + color.green(new_name));
+				console.log('This file has already been seen ' + colors.green(new_name));
 				console.warn('DELETE');
 				fs.unlinkSync(name);
 				return;
@@ -113,7 +120,8 @@ function upload_to_octoprint(name){
 		console.log('Succes !');
 		//updateRemoteFiles();
 	}).catch(function(err){
-		console.error(err);
+		console.error(red("Can't upload to " + process.env.OCTOPRINT_ADRESS));
+		//console.error(err);
 	});
 }
 
