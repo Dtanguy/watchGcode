@@ -1,7 +1,8 @@
 # watchGcode
-Daemon for simplify STL / Gcode management for 3D printing with Octoprint.<br>
-Look in realtime for new gcode file in a selected folder and upload it to Octoprint.
-It will also move the file in a history directory, with a timestamp.
+A daemon for simplifying STL / Gcode management for 3D printing with Octoprint.<br>
+- Look in real time for new gcode file in a selected folder and upload it to Octoprint.
+- Keep history of the files in a selected folder with a timestamp in name.
+- [TODO] automatically slice STL files
 
 ## Install
 ```js
