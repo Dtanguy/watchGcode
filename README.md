@@ -5,7 +5,7 @@ It will also move the file in a history directory, with a timestamp.
 
 ## Install
 ```js
-	npm i
+npm i
 ```
 
 ## Config
@@ -20,5 +20,5 @@ APIKEY='OCTOPRINT_API_KEY'
 
 ## Usage
 ```js
-	npm start
+npm start
 ```
