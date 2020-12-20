@@ -12,7 +12,7 @@ npm i
 
 ## Configuration
 
-Rename 'sample.env' to '.env' and complete it like follow :
+Rename 'sample.env' to '.env' and complete it as follows :
 ```env
 TO_WATCH='C:\Users\you'
 HISTORY='E:\Documents\'
