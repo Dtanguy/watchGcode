@@ -24,7 +24,7 @@ function queryPrinter(method, path, body, callback) {
       hostname:  config.hostName,  port: config.port,  path: path,  method: method,  timeout: 5000,
       headers:   {
                 'X-Api-Key':      config.apiKey,
-                'Content-Type':   'multipart/form-data',
+                'Content-Type':   "multipart/form-data; boundary='Save path : E:\\Documents\\WatchGcode\\gcode'",
                 'Content-Length': Buffer.byteLength(postData)
                 }
     };
@@ -128,10 +128,11 @@ module.exports = {
   // File operations - http://docs.octoprint.org/en/master/api/files.html
   filesUpload: function(filePath, callback) {
     var body = {
-      file: {
+      'file': fs.readFileSync(filePath,'utf8')
+      /*file: {
         filename: 'Uploaded.gcode',
         contents: fs.readFileSync(filePath,'utf8')
-      }      
+      }*/     
     };
     console.log(body);
     queryPrinter('POSTUP', '/api/files', body, function(response) {

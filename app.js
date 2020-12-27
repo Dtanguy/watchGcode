@@ -3,16 +3,16 @@ const fs				= require('fs.extra');
 const path				= require("path");
 const colors 			= require('colors');
 const watch				= require('node-watch');
-//const OctoPrintServer	= require('octoprint');
-const OctoPrint 		= require('./octo-client');
+const OctoPrintServer	= require('octoprint');
+//const OctoPrint 		= require('./octo-client');
 
 
 var settings = {
 	address: process.env.OCTOPRINT_ADRESS,
 	APIKey: process.env.APIKEY
 };
-//let server = new OctoPrintServer(settings);
-OctoPrint.setupAPI(settings);
+let server = new OctoPrintServer(settings);
+//OctoPrint.setupAPI(settings);
 
 var BASE_HISTORY = path.join(process.env.HISTORY, "WatchGcode");
 var GCODE_HISTORY = path.join(BASE_HISTORY, "gcode");
@@ -81,12 +81,36 @@ async function loop(evt, name){
 
 
 
-
-
 async function sendOctoprint(name, stats, cb){
 	//if(checkAlready(name, stats, function(){		
 		//let date = new Date(Date.now());
 		//let new_name = path.join(GCODE_HISTORY, '[' + date.toISOString().replace(/T/, '_').replace(/\..+/, '').split(':').join('-') + ']_' + path.basename(name));
+		let new_name = path.join(GCODE_HISTORY, path.basename(name).split('.')[0] + /*'-[' + Date.now() + ']' +*/ '.gcode');
+
+		fs.move (name, new_name, function (err) {
+			if (err) {
+				console.error(err);
+				cb(false);
+			}
+			console.warn('move to ' + colors.green(new_name));
+			upload_to_octoprint(new_name, cb);		
+		});		
+	//}));
+}
+
+async function upload_to_octoprint(name, cb){	
+	// Send file to 3d printer
+	console.warn('uploading... ');
+	server.sendFile(name).then(function(response){	
+		console.log('Succes !');
+		cb(true);	
+	}).catch(function(err){
+		console.error(red("Can't upload to " + process.env.OCTOPRINT_ADRESS));
+		cb(false);
+	});					
+}
+
+async function sendOctoprint2(name, stats, cb){
 		let new_name = path.join(GCODE_HISTORY, path.basename(name).split('.')[0] + '-[' + Date.now() + ']' + '.gcode');
 
 		fs.move (name, new_name, function (err) {
@@ -95,7 +119,6 @@ async function sendOctoprint(name, stats, cb){
 				cb(false);
 			}
 			console.warn('move to ' + colors.green(new_name));
-			//upload_to_octoprint(new_name, cb);
 			OctoPrint.filesUpload(new_name, function(res2){
 				console.log(res2);
 				if(res2.status == 'Success'){
@@ -104,7 +127,6 @@ async function sendOctoprint(name, stats, cb){
 				cb(false);
 			});
 		});		
-	//}));
 }
 
 
@@ -138,23 +160,59 @@ function checkAlready(name, stats, callback){
 */
 
 
-/*
-async function upload_to_octoprint(name, cb){	
-	// Send file to 3d printer
-	console.warn('uploading... ');
-	server.sendFile(name).then(function(response){	
-		console.log('Succes !');
-		cb(true);	
-	}).catch(function(err){
-		console.error(red("Can't upload to " + process.env.OCTOPRINT_ADRESS));
-		cb(false);
-	});					
-}
-*/
-
-
-
 function printLastUpload(){
+	console.log("I print that");
+
+	server.selectFile("10.gcode", false).then(function(response){	
+		console.log("Selected !");
+	});
+
+
+	/*
+	OctoPrint.printerState(function(res){
+		//console.log(res);  
+
+		// Is Printer ready ?
+		try {
+			if(res.state.flags.operational && !res.state.flags.printing){}
+		} catch (error) {
+			console.log("Printer not ready");  
+			return;
+		}		
+	
+		// List files
+		console.log("Printer Ready"); 
+		OctoPrint.files(true, function(res2){
+			//console.log(res2);
+
+			let last = {};
+			try {
+				let lastIt = 0;
+				for (var i = 0; i < res2.files.length; i++){				
+					//console.log(res2.files[i].date);
+					if(res2.files[i].date > res2.files[lastIt].date){
+						lastIt = i;
+					}
+				}
+				last = res2.files[lastIt];
+				console.log("Selected: " + last.name);
+			} catch (error) {
+				console.log("Error listing gcode");  
+				return;
+			}
+			
+			OctoPrint.selectFile(last.name, false, function(response){
+				console.log(response);
+				console.log("Start print");
+			});
+
+		});
+
+	});
+	*/
+}
+
+function printLastUpload2(){
 	//console.log("I print that");
 	OctoPrint.printerState(function(res){
 		//console.log(res);  
