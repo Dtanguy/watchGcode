@@ -1,9 +1,9 @@
 require('dotenv').config();
-const fs				= require('fs.extra');
-const path				= require("path");
-const colors 			= require('colors');
-const watch				= require('node-watch');
-const OctoPrintServer	= require('octoprint');
+const fs = require('fs.extra');
+const path = require("path");
+const colors = require('./colors.js');
+const watch = require('node-watch');
+const OctoPrintServer = require('octoprint');
 //const OctoPrint 		= require('./octo-client');
 
 
@@ -21,57 +21,57 @@ var startJobTimeout;
 
 
 
-async function loop(evt, name){
+async function loop(evt, name) {
 	//console.log('Changed: ' + name);
 
 	// Thing i don't want
-	if(	evt == 'removed'            		||
-		name.indexOf('.lnk') > -1 			|| 
-		name.indexOf(GCODE_HISTORY) > -1 	||
-		name.indexOf(STL_HISTORY) > -1		||
-		name.indexOf('AppData') > -1 ){
-		return; 
-	}	
-	
+	if (evt == 'removed' ||
+		name.indexOf('.lnk') > -1 ||
+		name.indexOf(GCODE_HISTORY) > -1 ||
+		name.indexOf(STL_HISTORY) > -1 ||
+		name.indexOf('AppData') > -1) {
+		return;
+	}
+
 	// Is Size ok ?
 	var stats_;
 	await new Promise((resolve, reject) => {
-		fs.stat(name, function(err, stats) {	
-			if(err ||  stats["size"] < 1){
+		fs.stat(name, function (err, stats) {
+			if (err || stats["size"] < 1) {
 				stats_ = -1;
 				//reject();
-			}else{
+			} else {
 				stats_ = stats;
-			}			
+			}
 			resolve();
 		});
 	});
-	if(stats_ == -1){
+	if (stats_ == -1) {
 		//console.log("Ignore");
 		return;
 	}
 
 	// File is GCODE
-	if( name.indexOf('.gcode') > -1 ) {
+	if (name.indexOf('.gcode') > -1) {
 		// Send it
 		clearTimeout(startJobTimeout);
-		console.log('New GCODE find : ' + colors.green(name) + ' evt: ' + evt + ' size: ' + stats_["size"]);		
+		console.log('New GCODE find : ' + colors.green(name) + ' evt: ' + evt + ' size: ' + stats_["size"]);
 		var res = false;
 		await new Promise((resolve, reject) => {
-			sendOctoprint(name, stats_, function(param){
+			sendOctoprint(name, stats_, function (param) {
 				res = param;
 				resolve();
 			});
 		});
 
 		// Print it
-		if(res && process.env.PRINT_LAST_UPLOAD == 'TRUE'){			
-			startJobTimeout = setTimeout(printLastUpload, 10000);				
-		}		
+		if (res && process.env.PRINT_LAST_UPLOAD == 'TRUE') {
+			startJobTimeout = setTimeout(printLastUpload, 10000);
+		}
 	}
 
 	// File is STL
-	if( name.indexOf('.stl')  > -1 ) {
+	if (name.indexOf('.stl') > -1) {
 		// Slice it
 		console.log('New STL find : ' + colors.green(name) + ' evt: ' + evt + ' size: ' + stats_["size"]);
 		slice(name, stats_);
@@ -81,56 +81,56 @@ async function loop(evt, name){
 
 
 
-async function sendOctoprint(name, stats, cb){
+async function sendOctoprint(name, stats, cb) {
 	//if(checkAlready(name, stats, function(){		
-		//let date = new Date(Date.now());
-		//let new_name = path.join(GCODE_HISTORY, '[' + date.toISOString().replace(/T/, '_').replace(/\..+/, '').split(':').join('-') + ']_' + path.basename(name));
-		let new_name = path.join(GCODE_HISTORY, path.basename(name).split('.')[0] + /*'-[' + Date.now() + ']' +*/ '.gcode');
+	//let date = new Date(Date.now());
+	//let new_name = path.join(GCODE_HISTORY, '[' + date.toISOString().replace(/T/, '_').replace(/\..+/, '').split(':').join('-') + ']_' + path.basename(name));
+	let new_name = path.join(GCODE_HISTORY, path.basename(name).split('.')[0] + /*'-[' + Date.now() + ']' +*/ '.gcode');
 
-		fs.move (name, new_name, function (err) {
-			if (err) {
-				console.error(err);
-				cb(false);
-			}
-			console.warn('move to ' + colors.green(new_name));
-			upload_to_octoprint(new_name, cb);		
-		});		
+	fs.move(name, new_name, function (err) {
+		if (err) {
+			console.error(err);
+			cb(false);
+		}
+		console.warn('move to ' + colors.green(new_name));
+		upload_to_octoprint(new_name, cb);
+	});
 	//}));
 }
 
-async function upload_to_octoprint(name, cb){	
+async function upload_to_octoprint(name, cb) {
 	// Send file to 3d printer
 	console.warn('uploading... ');
-	server.sendFile(name).then(function(response){	
+	server.sendFile(name).then(function (response) {
 		console.log('Succes !');
-		cb(true);	
-	}).catch(function(err){
+		cb(true);
+	}).catch(function (err) {
 		console.error(red("Can't upload to " + process.env.OCTOPRINT_ADRESS));
 		cb(false);
-	});					
+	});
 }
 
-async function sendOctoprint2(name, stats, cb){
-		let new_name = path.join(GCODE_HISTORY, path.basename(name).split('.')[0] + '-[' + Date.now() + ']' + '.gcode');
+async function sendOctoprint2(name, stats, cb) {
+	let new_name = path.join(GCODE_HISTORY, path.basename(name).split('.')[0] + '-[' + Date.now() + ']' + '.gcode');
 
-		fs.move (name, new_name, function (err) {
-			if (err) {
-				console.error(err);
-				cb(false);
+	fs.move(name, new_name, function (err) {
+		if (err) {
+			console.error(err);
+			cb(false);
+		}
+		console.warn('move to ' + colors.green(new_name));
+		OctoPrint.filesUpload(new_name, function (res2) {
+			console.log(res2);
+			if (res2.status == 'Success') {
+				cb(true);
 			}
-			console.warn('move to ' + colors.green(new_name));
-			OctoPrint.filesUpload(new_name, function(res2){
-				console.log(res2);
-				if(res2.status == 'Success'){
-					cb(true);
-				}
-				cb(false);
-			});
-		});		
+			cb(false);
+		});
+	});
 }
 
 
-function slice(name, stats){
+function slice(name, stats) {
 	//moveTo(name, process.env.STL_HISTORY);
 }
 
@@ -140,8 +140,8 @@ function slice(name, stats){
 function checkAlready(name, stats, callback){	
 	server.getAllFiles().then(function(files, err){
 		if (err) {
-		  console.error(err);
-		  return;
+			console.error(err);
+			return;
 		}
 		remoteFiles = files.files;
 		console.log("Check " + colors.green(remoteFiles.length) + " Files name");
@@ -160,10 +160,10 @@ function checkAlready(name, stats, callback){
 */
 
 
-function printLastUpload(){
+function printLastUpload() {
 	console.log("I print that");
 
-	server.selectFile("10.gcode", false).then(function(response){	
+	server.selectFile("10.gcode", false).then(function (response) {
 		console.log("Selected !");
 	});
 
@@ -212,41 +212,41 @@ function printLastUpload(){
 	*/
 }
 
-function printLastUpload2(){
+function printLastUpload2() {
 	//console.log("I print that");
-	OctoPrint.printerState(function(res){
+	OctoPrint.printerState(function (res) {
 		//console.log(res);  
 
 		// Is Printer ready ?
 		try {
-			if(res.state.flags.operational && !res.state.flags.printing){}
+			if (res.state.flags.operational && !res.state.flags.printing) { }
 		} catch (error) {
-			console.log("Printer not ready");  
+			console.log("Printer not ready");
 			return;
-		}		
-	
+		}
+
 		// List files
-		console.log("Printer Ready"); 
-		OctoPrint.files(true, function(res2){
+		console.log("Printer Ready");
+		OctoPrint.files(true, function (res2) {
 			//console.log(res2);
 
 			let last = {};
 			try {
 				let lastIt = 0;
-				for (var i = 0; i < res2.files.length; i++){				
+				for (var i = 0; i < res2.files.length; i++) {
 					//console.log(res2.files[i].date);
-					if(res2.files[i].date > res2.files[lastIt].date){
+					if (res2.files[i].date > res2.files[lastIt].date) {
 						lastIt = i;
 					}
 				}
 				last = res2.files[lastIt];
 				console.log("Selected: " + last.name);
 			} catch (error) {
-				console.log("Error listing gcode");  
+				console.log("Error listing gcode");
 				return;
 			}
-			
-			OctoPrint.selectFile(last.name, false, function(response){
+
+			OctoPrint.selectFile(last.name, false, function (response) {
 				console.log(response);
 				console.log("Start print");
 			});
@@ -262,15 +262,15 @@ function printLastUpload2(){
 
 
 
-function main(){
+function main() {
 	// Create needed folders
-	if (!fs.existsSync(BASE_HISTORY)){
+	if (!fs.existsSync(BASE_HISTORY)) {
 		fs.mkdirSync(BASE_HISTORY);
 	}
-	if (!fs.existsSync(GCODE_HISTORY)){
+	if (!fs.existsSync(GCODE_HISTORY)) {
 		fs.mkdirSync(GCODE_HISTORY);
 	}
-	if (!fs.existsSync(STL_HISTORY)){
+	if (!fs.existsSync(STL_HISTORY)) {
 		fs.mkdirSync(STL_HISTORY);
 	}
 
